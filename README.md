@@ -1,5 +1,5 @@
 # Particules-Interaction-Cellular-Automata
-Toujours en début de développement, à revoir déplacement des liquides + chute libre + système de d'éclaboussure qui fait remonter les particules d'eau à des endroits impossible.
+Toujours en début de développement, à revoir déplacement des liquides + chute libre + système d'éclaboussure qui fait remonter les particules d'eau à des endroits impossible.
 
 Commandes : <br>
   -a : initialise l'écran avec des particules d'air<br>
