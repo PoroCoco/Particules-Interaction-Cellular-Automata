@@ -8,6 +8,7 @@
 //eau remonte descente sable et se retrouve dans endroits impossible....
 
 
+//gcc -std=c99 -Wall src/main.c -o bin/prog -I include -L lib -lmingw32 -lSDL2main -lSDL2
 #include <SDL.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -21,11 +22,15 @@
 #define PIXEL_WIDTH 2
 #define PIXEL_HEIGHT 2
 
-#define COLONNE 500
-#define LIGNE 400
+#define COLONNE 500  // = WINDOW_WIDTH / PIXEL_WIDTH
+#define LIGNE 400    // = WINDOW_HEIGHT / PIXEL_HEIGHT
 
 
-#define water_speed 5
+#define water_spread_speed 3
+#define sable_max_y_velocity 5
+#define feu_max_y_velocity 2
+#define eau_max_y_velocity 6
+#define vapeur_max_y_velocity 3
 
 #define mat_id_air 0
 #define mat_id_sable 1
@@ -116,11 +121,13 @@ bool isSurrounedAroundBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int 
 
 bool isSurrounedSideBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int mat_id);
 
+void burningColor(particule_t world[LIGNE][COLONNE], int y, int x,int mat_id);
+
 struct particule particule_air = { .id = mat_id_air, .life_time = 0, .velocity = {.x = 0, .y = 0}, .color = {125,125,125,255}, .has_been_updated = false};
 struct particule particule_sable = { .id = mat_id_sable, .life_time = -1, .velocity = {.x = 0, .y = 0}, .color = {255,255,0,255}, .has_been_updated = false};
 struct particule particule_eau = { .id = mat_id_eau, .life_time = -1, .velocity = {.x = 0, .y = 0}, .color = {0,0,255,255}, .has_been_updated = false};
 struct particule particule_bois = { .id = mat_id_bois, .life_time = lifetime_wood, .velocity = {.x = 0, .y = 0}, .color = {139,69,19,255}, .has_been_updated = false};
-struct particule particule_feu = { .id = mat_id_feu, .life_time = lifetime_feu, .velocity = {.x = 0, .y = 0}, .color = {200,0,0,255}, .has_been_updated = false};
+struct particule particule_feu = { .id = mat_id_feu, .life_time = lifetime_feu, .velocity = {.x = 0, .y = 0}, .color = {255,92,15,255}, .has_been_updated = false};
 struct particule particule_vapeur = { .id = mat_id_vapeur, .life_time = lifetime_vapeur, .velocity = {.x = 0, .y = 0}, .color = {220,220,220,120}, .has_been_updated = false};
 
 int main(int argc, char ** argv){
@@ -565,10 +572,10 @@ void updateBois(particule_t world[LIGNE][COLONNE], uint x, uint y){
     world[y][x].has_been_updated = true;
     if(world[y][x].life_time != lifetime_wood){
         looseLife(world, y, x, 3, 4);
-        world[y][x].color.R = 255;
-        world[y][x].color.G = 140;
-        world[y][x].color.B = 0;
-        //burningColor(world, y, x, mat_id_bois);
+        
+        if(rand()%250 == 1 || (world[y][x].life_time<=100 && world[y][x].color.R == 139 && world[y][x].color.G == 69 && world[y][x].color.B == 19) ){         // 1/251 de chance de changer la couleur 
+            burningColor(world, y, x, mat_id_bois);
+        }
         burnAround(world, y, x);
     }
     if(world[y][x].life_time <=0){
@@ -590,6 +597,9 @@ void updateAir(particule_t world[LIGNE][COLONNE], uint x, uint y){
 void updateFeu(particule_t world[LIGNE][COLONNE], uint x, uint y){
     world[y][x].has_been_updated = true;
     looseLife(world, y, x, 3, 4);
+    if(rand()%15 == 1){
+        burningColor(world, y, x, mat_id_feu);
+    }
     if(world[y][x].life_time<=0){  
         world[y][x] = particule_air;
     }
@@ -659,17 +669,17 @@ void applyVect(int x, int y,particule_t world[LIGNE][COLONNE], int id){
         direction = -1;
     }
     move_y = move_y*direction; 
-    if(id == mat_id_sable &&  move_y> 5){
-        world[y][x].velocity.y = 5*direction;
+    if(id == mat_id_sable &&  move_y> sable_max_y_velocity){
+        world[y][x].velocity.y = sable_max_y_velocity*direction;
     }
-    else if(id == mat_id_feu &&  move_y> 2){
-        world[y][x].velocity.y = 2*direction;
+    else if(id == mat_id_feu &&  move_y> feu_max_y_velocity){
+        world[y][x].velocity.y = feu_max_y_velocity*direction;
     }
-    else if(id == mat_id_vapeur && move_y> 3){
-        world[y][x].velocity.y = 3*direction;
+    else if(id == mat_id_vapeur && move_y> vapeur_max_y_velocity){
+        world[y][x].velocity.y = vapeur_max_y_velocity*direction;
     }
-    else if(id == mat_id_eau && move_y > 6){
-        world[y][x].velocity.y = 6*direction;
+    else if(id == mat_id_eau && move_y > eau_max_y_velocity){
+        world[y][x].velocity.y = eau_max_y_velocity*direction;
     }
     int newParticule_y = y;
     bool splashed = false;
@@ -693,7 +703,7 @@ void applyVect(int x, int y,particule_t world[LIGNE][COLONNE], int id){
     particule_t tmp = world[y][x];
     world[y][x] = world[newParticule_y][x];
     world[newParticule_y][x] = tmp;
-    if(splashed == true){
+    if(splashed == true && isInWorldBoundaries(y,x)){
         world[y][x].velocity.y = (move_y) *-1;
         if(rand()%2 == 0){
             if(isInWorldBoundaries(y,x-1) && world[y][x-1].id == mat_id_air){
@@ -729,6 +739,10 @@ void applyVect(int x, int y,particule_t world[LIGNE][COLONNE], int id){
         }
         if(id == mat_id_vapeur && i== 2){
             world[tmpPosOfY][x+(1*direction)+(i*direction)].velocity.x = 2*direction;
+            break;
+        }
+        if(id == mat_id_eau && i== water_spread_speed){
+            world[tmpPosOfY][x+(1*direction)+(i*direction)].velocity.x = water_spread_speed*direction;
             break;
         }
         if(i == 15){
@@ -864,4 +878,67 @@ bool isSurrounedSideBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int ma
         surronded = false;
     }
     return surronded;
+}
+
+
+void burningColor(particule_t world[LIGNE][COLONNE], int y, int x,int mat_id){
+    if(isInWorldBoundaries(y,x)){
+        if(mat_id == mat_id_bois){
+            int R,G,B;
+            R = 220;
+            G = 130;
+            B = 51;
+            int randR, randG, randB;
+            randR = rand()%15;
+            randG = rand()%27;
+            randB = rand()%8;
+            int minusOrPlusR,minusOrPlusG,minusOrPlusB;
+            if(rand()%2 == 1){
+                minusOrPlusR = 1;
+            }else{
+                minusOrPlusR = -1;
+            }
+            if(rand()%2 == 1){
+                minusOrPlusG = 1;
+            }else{
+                minusOrPlusG = -1;
+            }
+            if(rand()%2 == 1){
+                minusOrPlusB = 1;
+            }else{
+                minusOrPlusB = -1;
+            }
+            world[y][x].color.R = R + (randR*minusOrPlusR);
+            world[y][x].color.G = G + (randG*minusOrPlusG);
+            world[y][x].color.B = B + (randB*minusOrPlusB);
+        }else if (mat_id == mat_id_feu){
+            int R,G,B;
+            R = 255;
+            G = 92;
+            B = 10;
+            int randR, randG, randB;
+            randR = rand()%18;
+            randG = rand()%23;
+            randB = rand()%10;
+            int minusOrPlusR,minusOrPlusG,minusOrPlusB;
+            if(rand()%2 == 1){
+                minusOrPlusR = 0;
+            }else{
+                minusOrPlusR = -1;
+            }
+            if(rand()%2 == 1){
+                minusOrPlusG = 1;
+            }else{
+                minusOrPlusG = -1;
+            }
+            if(rand()%2 == 1){
+                minusOrPlusB = 1;
+            }else{
+                minusOrPlusB = -1;
+            }
+            world[y][x].color.R = R + (randR*minusOrPlusR);
+            world[y][x].color.G = G + (randG*minusOrPlusG);
+            world[y][x].color.B = B + (randB*minusOrPlusB);    
+        }
+    }
 }
