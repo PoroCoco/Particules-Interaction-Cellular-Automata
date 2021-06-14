@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "particules.h"
 
 // SDL_RENDERER_SOFTWARE; SDL_RENDERER_ACCELERATED; SDL_RENDERER_PRESENTVSYNC
 
@@ -26,55 +27,6 @@
 #define LIGNE 400    // = WINDOW_HEIGHT / PIXEL_HEIGHT
 
 
-#define water_spread_speed 3
-#define sable_max_y_velocity 5
-#define feu_max_y_velocity 2
-#define eau_max_y_velocity 6
-#define vapeur_max_y_velocity 3
-
-#define mat_id_air 0
-#define mat_id_sable 1
-#define mat_id_eau 2
-#define mat_id_bois 3
-#define mat_id_feu 4
-#define mat_id_vapeur 5
-
-#define bois_flammability 40
-
-#define lifetime_wood 250
-#define lifetime_feu 355
-#define lifetime_vapeur 150
-
-typedef unsigned int uint;
-
-struct vector{
-    float x;
-    float y;
-};
-typedef struct vector vector_t;
-
-struct color{
-    uint R;
-    uint G;
-    uint B;
-    uint ALPHA;
-};
-typedef struct color color_t;
-
-color_t RED = {255,0,0,255};
-
-// 0 = air; 1 = sable
-
-struct particule{
-    unsigned int id;
-    float life_time;
-    vector_t velocity;
-    color_t color;
-    bool has_been_updated;
-
-};
-typedef struct particule particule_t;
-
 
 void SDL_ExitWithError(const char *message, SDL_Window *window, SDL_Renderer *renderer );
 
@@ -87,6 +39,7 @@ void setParticuleXY_10by10(particule_t world[LIGNE][COLONNE], uint mat_id, uint 
 
 void updateArray(particule_t world[LIGNE][COLONNE]);
 
+//prototype des fonctions contenant les règles de chaque particules.
 void updateSand(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
 bool isInWorldBoundaries(uint x, uint y);
@@ -123,12 +76,6 @@ bool isSurrounedSideBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int ma
 
 void burningColor(particule_t world[LIGNE][COLONNE], int y, int x,int mat_id);
 
-struct particule particule_air = { .id = mat_id_air, .life_time = 0, .velocity = {.x = 0, .y = 0}, .color = {125,125,125,255}, .has_been_updated = false};
-struct particule particule_sable = { .id = mat_id_sable, .life_time = -1, .velocity = {.x = 0, .y = 0}, .color = {255,255,0,255}, .has_been_updated = false};
-struct particule particule_eau = { .id = mat_id_eau, .life_time = -1, .velocity = {.x = 0, .y = 0}, .color = {0,0,255,255}, .has_been_updated = false};
-struct particule particule_bois = { .id = mat_id_bois, .life_time = lifetime_wood, .velocity = {.x = 0, .y = 0}, .color = {139,69,19,255}, .has_been_updated = false};
-struct particule particule_feu = { .id = mat_id_feu, .life_time = lifetime_feu, .velocity = {.x = 0, .y = 0}, .color = {255,92,15,255}, .has_been_updated = false};
-struct particule particule_vapeur = { .id = mat_id_vapeur, .life_time = lifetime_vapeur, .velocity = {.x = 0, .y = 0}, .color = {220,220,220,120}, .has_been_updated = false};
 
 int main(int argc, char ** argv){
  
@@ -309,7 +256,7 @@ void SDL_ExitWithError(const char *message, SDL_Window *window, SDL_Renderer *re
     exit(EXIT_FAILURE);
 }
 
-void fillArrayWithMat(particule_t world[LIGNE][COLONNE], uint mat_id){
+void fillArrayWithMat(particule_t world[LIGNE][COLONNE], uint mat_id){ //rempli le world avec 1 type de particule
     for(uint y = 0; y < LIGNE; y++){
         for(uint x = 0; x < COLONNE; x++){
             if (mat_id == mat_id_sable){
@@ -338,7 +285,7 @@ void renderArray(SDL_Renderer *renderer, particule_t world[LIGNE][COLONNE], SDL_
     }
 }
 
-void setParticuleXY(particule_t world[LIGNE][COLONNE], uint mat_id, uint x, uint y){
+void setParticuleXY(particule_t world[LIGNE][COLONNE], uint mat_id, uint x, uint y){ //place la particule correpondant au mat_id aux coordonnées XY
     if(isInWorldBoundaries(y,x)){
         if(mat_id == mat_id_sable){
             world[y][x] = particule_sable;
@@ -350,10 +297,10 @@ void setParticuleXY(particule_t world[LIGNE][COLONNE], uint mat_id, uint x, uint
     }
 }
 
-void updateArray(particule_t world[LIGNE][COLONNE]){
+void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de haut en bas, gauche à droite soit de haut en bas, de droite à gauche (permet de briser les patternes récurrents). Appelle la fonction d'update approprié pour chaque particules.
     int randomInt = rand() % 2;
     if(randomInt ==0){
-        for(int y = LIGNE; y > -1; y--){
+        for(int y = LIGNE-1; y > -1; y--){
             for(int x = 0; x < COLONNE; x++){
                 if(world[y][x].has_been_updated == false){
                     if(world[y][x].id == mat_id_sable){
@@ -372,7 +319,7 @@ void updateArray(particule_t world[LIGNE][COLONNE]){
             }
         }
     }else{
-        for(int y = LIGNE; y > -1; y--){
+        for(int y = LIGNE-1; y > -1; y--){
             for(int x = COLONNE; x > -1 ; x = x-1){
                 if(world[y][x].has_been_updated == false){
                     if(world[y][x].id == mat_id_sable){
@@ -437,14 +384,14 @@ void updateSand(particule_t world[LIGNE][COLONNE], uint x, uint y){
     }
 }
 
-bool isInWorldBoundaries(uint y, uint x){
+bool isInWorldBoundaries(uint y, uint x){    //regarde si les coordonnées souhaitées existe dans l'array. Renvoie true si oui sinon false.
     if(x>=0 && x<=COLONNE-1 && y>=0 && y<= LIGNE-1){
         return true;
     }
     return false;
 }
 
-void setArrayToUpdate(particule_t world[LIGNE][COLONNE]){
+void setArrayToUpdate(particule_t world[LIGNE][COLONNE]){ //chaque particule de l'array revient à l'état not updated.
     for(uint y = 0; y < LIGNE; y++){
         for(uint x = 0; x < COLONNE; x++){
             world[y][x].has_been_updated = false;
@@ -454,16 +401,16 @@ void setArrayToUpdate(particule_t world[LIGNE][COLONNE]){
 
 void updateWater(particule_t world[LIGNE][COLONNE], uint x, uint y){
     world[y][x].has_been_updated = true;
-    if(isInWorldBoundaries(y+1,x) && world[y+1][x].id == mat_id_bois && world[y+1][x].life_time != lifetime_wood){ //éteint le bois qui est en train de bruler;
+    if(isInWorldBoundaries(y+1,x) && world[y+1][x].id == mat_id_bois && world[y+1][x].life_time != lifetime_wood){ //éteint le bois qui est en train de bruler (check que les particules en dessous pour l'instant);
         world[y][x] = particule_vapeur;
         world[y+1][x] = particule_bois;
         world[y+1][x].life_time = lifetime_wood;
     }
-    if(isInWorldBoundaries(y+1,x) && (world[y+1][x].id == mat_id_air || world[y+1][x].id == mat_id_vapeur)){
+    if(isInWorldBoundaries(y+1,x) && (world[y+1][x].id == mat_id_air || world[y+1][x].id == mat_id_vapeur)){ //
         world[y][x].velocity.y += 1;
         world[y][x].velocity.x = world[y][x].velocity.x/2;
         applyVect(x,y,world,mat_id_eau);
-    }else if(isSurrounedSideBy(world, x, y, mat_id_sable)){
+    }else if(isSurrounedSideBy(world, x, y, mat_id_sable) && isInWorldBoundaries(y-1,x)){
         particule_t tmp = world[y-1][x];
         world[y-1][x] = world[y][x];
         world[y][x] = tmp;
@@ -604,19 +551,22 @@ void updateFeu(particule_t world[LIGNE][COLONNE], uint x, uint y){
         world[y][x] = particule_air;
     }
     if(isInWorldBoundaries(y-1,x) && world[y-1][x].id == mat_id_eau){
+        world[y][x] = particule_vapeur; 
         world[y-1][x] = particule_vapeur; 
-        world[y][x] = particule_vapeur;
         return;
     }else if(isInWorldBoundaries(y+1,x) && world[y+1][x].id == mat_id_eau){
-        world[y+1][x] = particule_vapeur; 
+        world[y+1][x] = particule_air; 
         world[y][x] = particule_vapeur;
+        if(isInWorldBoundaries(y+2,x) && world[y+2][x].id == mat_id_air){
+            world[y+2][x] = particule_vapeur;
+        }
         return;
     }else if(isInWorldBoundaries(y,x+1) && world[y][x+1].id == mat_id_eau){
         world[y][x+1] = particule_vapeur; 
         world[y][x] = particule_vapeur;
         return;
     }else if(isInWorldBoundaries(y,x-1) && world[y][x-1].id == mat_id_eau){
-        world[y][x-1] = particule_vapeur; 
+        world[y][x-1] = particule_air; 
         world[y][x] = particule_vapeur;
         return;
     }
@@ -769,7 +719,7 @@ void burnAround(particule_t world[LIGNE][COLONNE],int y, int x){
     }if(isInWorldBoundaries(y,x-1) && catchedOnFire(world[y][x-1].id)){
         world[y][x-1].life_time --;
     }if(isInWorldBoundaries(y,x+1) && catchedOnFire(world[y][x+1].id)){
-        world[y+1][x+1].life_time --;
+        world[y][x+1].life_time --;
     }if(isInWorldBoundaries(y-1,x-1) && catchedOnFire(world[y-1][x-1].id)){
         world[y-1][x-1].life_time --;
     }if(isInWorldBoundaries(y-1,x) && catchedOnFire(world[y-1][x].id)){
