@@ -6,7 +6,7 @@ Commandes : <br>
   -mouse click : place particule sélectionnée<br>
   -i : click souris permet d'observer une particule (id, lifetime, velocity)<br>
   -p : click souris permet d'highlight une particule en changeant sa couleur en noir <br>
-  -r : Randomize chaque particules de l'écran (peut causer un crash)<br>
+  -r : Randomize chaque particules de l'écran <br>
   
   
 Choix des particules :<br>
