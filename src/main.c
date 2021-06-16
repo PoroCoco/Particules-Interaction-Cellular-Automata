@@ -8,6 +8,9 @@
 //eau remonte descente sable et se retrouve dans endroits impossible....
 
 
+//besoin d'avoir chute libre de sable et eau lorsque sol dessous enlevé. Pour avoir cela la regle "peux aller en bas a gauche/droite" doit avoir une condition supplémentaire sans trop la limiter.
+
+
 //gcc -std=c99 -Wall src/main.c -o bin/prog -I include -L lib -lmingw32 -lSDL2main -lSDL2
 #include <SDL.h>
 #include <stdio.h>
@@ -24,7 +27,7 @@
 #define PIXEL_HEIGHT 2
 
 #define COLONNE 500  // = WINDOW_WIDTH / PIXEL_WIDTH
-#define LIGNE 400    // = WINDOW_HEIGHT / PIXEL_HEIGHT
+#define LIGNE 400  // = WINDOW_HEIGHT / PIXEL_HEIGHT
 
 
 
@@ -42,29 +45,31 @@ void updateArray(particule_t world[LIGNE][COLONNE]);
 //prototype des fonctions contenant les règles de chaque particules.
 void updateSand(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
-bool isInWorldBoundaries(uint x, uint y);
-
-void setArrayToUpdate(particule_t world[LIGNE][COLONNE]);
-
 void updateWater(particule_t world[LIGNE][COLONNE], uint x, uint y);
-
-void randomizeWorld(particule_t world[LIGNE][COLONNE]);
-
-void updateAir(particule_t world[LIGNE][COLONNE], uint x, uint y);
-
-void applyVect(int x, int y,particule_t world[LIGNE][COLONNE], int id);
 
 void updateBois(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
 void updateFeu(particule_t world[LIGNE][COLONNE], uint x, uint y);
+
+void updateAir(particule_t world[LIGNE][COLONNE], uint x, uint y);
+
+void updateVapeur(particule_t world[LIGNE][COLONNE], uint x, uint y);
+
+
+
+bool isInWorldBoundaries(uint x, uint y);
+
+void setArrayToUpdate(particule_t world[LIGNE][COLONNE]);
+
+void randomizeWorld(particule_t world[LIGNE][COLONNE]);
+
+void applyVect(int x, int y,particule_t world[LIGNE][COLONNE], int id);
 
 bool catchedOnFire(int flammability);
 
 void burnAround(particule_t world[LIGNE][COLONNE],int y, int x);
 
 void looseLife(particule_t world[LIGNE][COLONNE],int y, int x, int life_lost, int chance);
-
-void updateVapeur(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
 void displayParticuleInfos(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
@@ -76,6 +81,9 @@ bool isSurrounedSideBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int ma
 
 void burningColor(particule_t world[LIGNE][COLONNE], int y, int x,int mat_id);
 
+bool isNotOnAFallTrajectory(particule_t world[LIGNE][COLONNE], uint x, uint y);
+
+void setGravity(int valeur);
 
 int main(int argc, char ** argv){
  
@@ -86,7 +94,7 @@ int main(int argc, char ** argv){
 
     srand(8575); //initialise le random avec une seed
     uint elementSelected = 0;
-
+    setGravity(def_gravity);
 
     if(SDL_Init(SDL_INIT_VIDEO) != 0){
         SDL_ExitWithError("Initialisation SDL",window,renderer);
@@ -180,7 +188,7 @@ int main(int argc, char ** argv){
                         continue;
 
                     case SDLK_l:
-                        //updateArray(world);
+                        updateArray(world);
                         continue;
 
                     case SDLK_i:
@@ -191,6 +199,11 @@ int main(int argc, char ** argv){
                     case SDLK_p:
                         printf("Paint mod selectionné :\n");
                         elementSelected = -2;
+                        continue;
+                    
+                    case SDLK_g:
+                        printf("Changement gravité\n");
+                        setGravity(-gravity);
                         continue;
 
                     default:
@@ -299,99 +312,155 @@ void setParticuleXY(particule_t world[LIGNE][COLONNE], uint mat_id, uint x, uint
 
 void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de haut en bas, gauche à droite soit de haut en bas, de droite à gauche (permet de briser les patternes récurrents). Appelle la fonction d'update approprié pour chaque particules.
     int randomInt = rand() % 2;
-    if(randomInt ==0){
-        for(int y = LIGNE-1; y > -1; y--){
-            for(int x = 0; x < COLONNE; x++){
-                if(world[y][x].has_been_updated == false){
-                    if(world[y][x].id == mat_id_sable){
-                        updateSand(world, x, y);
-                    }else if(world[y][x].id == mat_id_eau){
-                        updateWater(world,x,y);
-                    }else if(world[y][x].id == mat_id_bois){
-                        updateBois(world,x,y);
-                    }else if(world[y][x].id == mat_id_feu){
-                        updateFeu(world,x,y);
-                    }else if(world[y][x].id == mat_id_vapeur){
-                        updateVapeur(world,x,y);
+    if(gravity_direction == 1){  //on update toujours notre monde depuis le bas qui dépend donc de la gravité positive ou négative.
+        if(randomInt ==0){
+            for(int y = LIGNE-1; y > -1; y--){
+                for(int x = 0; x < COLONNE; x++){
+                    if(world[y][x].id != mat_id_air && world[y][x].has_been_updated == false ){
+                        if(world[y][x].id == mat_id_sable){
+                            updateSand(world, x, y);
+                        }else if(world[y][x].id == mat_id_eau){
+                            updateWater(world,x,y);
+                        }else if(world[y][x].id == mat_id_bois){
+                            updateBois(world,x,y);
+                        }else if(world[y][x].id == mat_id_feu){
+                            updateFeu(world,x,y);
+                        }else if(world[y][x].id == mat_id_vapeur){
+                            updateVapeur(world,x,y);
+                        }
+                        //}
                     }
-                    //}
+                }
+            }
+        }else{
+            for(int y = LIGNE-1; y > -1; y--){
+                for(int x = COLONNE; x > -1 ; x = x-1){
+                    if(world[y][x].id != mat_id_air && world[y][x].has_been_updated == false ){
+                        if(world[y][x].id == mat_id_sable){
+                            updateSand(world, x, y);
+                        }else if(world[y][x].id == mat_id_eau){
+                            updateWater(world, x, y);
+                        }else if(world[y][x].id == mat_id_bois){
+                            updateBois(world,x,y);
+                        }else if(world[y][x].id == mat_id_feu){
+                            updateFeu(world,x,y);
+                        }else if(world[y][x].id == mat_id_vapeur){
+                            updateVapeur(world,x,y);
+                        }
+                        
+                        //}
+                    }
                 }
             }
         }
     }else{
-        for(int y = LIGNE-1; y > -1; y--){
-            for(int x = COLONNE; x > -1 ; x = x-1){
-                if(world[y][x].has_been_updated == false){
-                    if(world[y][x].id == mat_id_sable){
-                        updateSand(world, x, y);
-                    }else if(world[y][x].id == mat_id_eau){
-                        updateWater(world, x, y);
-                    }else if(world[y][x].id == mat_id_bois){
-                        updateBois(world,x,y);
-                    }else if(world[y][x].id == mat_id_feu){
-                        updateFeu(world,x,y);
-                    }else if(world[y][x].id == mat_id_vapeur){
-                        updateVapeur(world,x,y);
+        if(randomInt ==0){
+            for(int y = 0; y < LIGNE; y++){
+                for(int x = 0; x < COLONNE; x++){
+                    if(world[y][x].id != mat_id_air && world[y][x].has_been_updated == false ){
+                        if(world[y][x].id == mat_id_sable){
+                            updateSand(world, x, y);
+                        }else if(world[y][x].id == mat_id_eau){
+                            updateWater(world,x,y);
+                        }else if(world[y][x].id == mat_id_bois){
+                            updateBois(world,x,y);
+                        }else if(world[y][x].id == mat_id_feu){
+                            updateFeu(world,x,y);
+                        }else if(world[y][x].id == mat_id_vapeur){
+                            updateVapeur(world,x,y);
+                        }
+                        //}
                     }
-                    
-                    //}
                 }
             }
-        }
+        }else{
+            for(int y = 0; y < LIGNE; y++){
+                for(int x = COLONNE; x > -1 ; x = x-1){
+                    if(world[y][x].id != mat_id_air && world[y][x].has_been_updated == false ){
+                        if(world[y][x].id == mat_id_sable){
+                            updateSand(world, x, y);
+                        }else if(world[y][x].id == mat_id_eau){
+                            updateWater(world, x, y);
+                        }else if(world[y][x].id == mat_id_bois){
+                            updateBois(world,x,y);
+                        }else if(world[y][x].id == mat_id_feu){
+                            updateFeu(world,x,y);
+                        }else if(world[y][x].id == mat_id_vapeur){
+                            updateVapeur(world,x,y);
+                        }
+                        
+                        //}
+                    }
+                }
+            }
+        }        
     }
-
 }
 
 
 void updateSand(particule_t world[LIGNE][COLONNE], uint x, uint y){
     world[y][x].has_been_updated = true;
-    if(isInWorldBoundaries(y+1,x) && (world[y+1][x].id == mat_id_air || world[y+1][x].id == mat_id_vapeur) ){ // si rien en dessous prend de la vitesse verticale.
-        world[y][x].velocity.y += 1;
+    if(isInWorldBoundaries(y+gravity_direction,x) && (world[y+gravity_direction][x].id == mat_id_air || world[y+gravity_direction][x].id == mat_id_vapeur) ){ // si rien en dessous prend de la vitesse verticale.
+        world[y][x].velocity.y += gravity;
         applyVect(x,y,world,1);
-    }else if(isInWorldBoundaries(y+1,x) && world[y+1][x].id == mat_id_eau && world[y+1][x].has_been_updated == false){ //si eau en dessous perd vitesse verticale(petit à petit) puis échange avec eau. (vitesse verticale inutile puisque pas d'appel à apply vect après)
+    }else if(isInWorldBoundaries(y+gravity_direction,x) && world[y+gravity_direction][x].id == mat_id_eau && world[y+gravity_direction][x].has_been_updated == false){ //si eau en dessous perd vitesse verticale(petit à petit) puis échange avec eau. (vitesse verticale inutile puisque pas d'appel à apply vect après)
         if(world[y][x].velocity.y > 0){
-            world[y][x].velocity.y = -1;
+            world[y][x].velocity.y -= gravity;
         }
-        particule_t tmp = world[y+1][x];
-        world[y+1][x] = world[y][x];
-        world[y][x] = tmp;
-        world[y][x].has_been_updated = true;
+        if(rand()%100==1){
+            particule_t tmp = world[y+gravity_direction][x];
+            world[y+gravity_direction][x] = world[y][x];
+            world[y][x] = tmp;
+            world[y][x].has_been_updated = true;
+            applyVect(x,y+gravity_direction,world,1);
+        }
     }else{
         int randomInt = rand() % 2; //permet d'alterner entre toujours position gauche en premier ou toujours position droite en premier. 
-        world[y][x].velocity.y = 0;
+        if(isSurrounedAroundBy(world,x,y,mat_id_eau)){
+            randomInt = rand()%5;
+        }
         if(randomInt==0){
-            if(isInWorldBoundaries(y+1,x-1) && (world[y+1][x-1].id == mat_id_air || world[y+1][x-1].id == mat_id_vapeur || world[y+1][x-1].id == mat_id_eau) ){ // si rien/gaz/eau en bas à gauche alors va-y.
-                particule_t tmp = world[y+1][x-1];
-                world[y+1][x-1] = world[y][x];
+            if(isInWorldBoundaries(y+gravity_direction,x-1) && (world[y+gravity_direction][x-1].id == mat_id_air || world[y+gravity_direction][x-1].id == mat_id_vapeur || world[y+gravity_direction][x-1].id == mat_id_eau) && isNotOnAFallTrajectory(world,x-1,y+gravity_direction)){ // si rien/gaz/eau en bas à gauche alors va-y.
+                particule_t tmp = world[y+gravity_direction][x-1];
+                world[y+gravity_direction][x-1] = world[y][x];
                 world[y][x] = tmp;        
-            }else if(isInWorldBoundaries(y+1,x+1) && (world[y+1][x+1].id == mat_id_air || world[y+1][x+1].id == mat_id_vapeur|| world[y+1][x+1].id == mat_id_eau)   ){ // si rien/gaz/eau en bas à droite alors va-y.
-                particule_t tmp = world[y+1][x+1];
-                world[y+1][x+1] = world[y][x];
+                applyVect(x-1,y+gravity_direction,world,1);
+            }else if(isInWorldBoundaries(y+gravity_direction,x+1) && (world[y+gravity_direction][x+1].id == mat_id_air || world[y+gravity_direction][x+1].id == mat_id_vapeur|| world[y+gravity_direction][x+1].id == mat_id_eau)&& isNotOnAFallTrajectory(world,x+1,y+gravity_direction) ){ // si rien/gaz/eau en bas à droite alors va-y.
+                particule_t tmp = world[y+gravity_direction][x+1];
+                world[y+gravity_direction][x+1] = world[y][x];
                 world[y][x] = tmp;  
+                applyVect(x+1,y+gravity_direction,world,1);
+            }else{
+                world[y][x].velocity.y = 0;
             }
-        }else{
-            if(isInWorldBoundaries(y+1,x+1) && (world[y+1][x+1].id == mat_id_air || world[y+1][x+1].id == mat_id_vapeur || world[y+1][x+1].id == mat_id_eau) ){// si rien/gaz/eau en bas à droite alors va-y.
-                particule_t tmp = world[y+1][x+1];
-                world[y+1][x+1] = world[y][x];
+        }else if(randomInt == 1){
+            if(isInWorldBoundaries(y+gravity_direction,x+1) && (world[y+gravity_direction][x+1].id == mat_id_air || world[y+gravity_direction][x+1].id == mat_id_vapeur || world[y+gravity_direction][x+1].id == mat_id_eau) && isNotOnAFallTrajectory(world,x+1,y+gravity_direction)){// si rien/gaz/eau en bas à droite alors va-y.
+                particule_t tmp = world[y+gravity_direction][x+1];
+                world[y+gravity_direction][x+1] = world[y][x];
                 world[y][x] = tmp;
-            }else if(isInWorldBoundaries(y+1,x-1) && (world[y+1][x-1].id == mat_id_air || world[y+1][x-1].id == mat_id_vapeur || world[y+1][x-1].id == mat_id_eau)  ){// si rien/gaz/eau en bas à gauche alors va-y.
-                particule_t tmp = world[y+1][x-1];
-                world[y+1][x-1] = world[y][x];
+                applyVect(x+1,y+gravity_direction,world,1);
+            }else if(isInWorldBoundaries(y+gravity_direction,x-1) && (world[y+gravity_direction][x-1].id == mat_id_air || world[y+gravity_direction][x-1].id == mat_id_vapeur || world[y+gravity_direction][x-1].id == mat_id_eau) && isNotOnAFallTrajectory(world,x-1,y+gravity_direction)){// si rien/gaz/eau en bas à gauche alors va-y.
+                particule_t tmp = world[y+gravity_direction][x-1];
+                world[y+gravity_direction][x-1] = world[y][x];
                 world[y][x] = tmp; 
+                applyVect(x-1,y+gravity_direction,world,1);
+            }else{
+                world[y][x].velocity.y = 0;
             }
 
         }    
     }
 }
-
-bool isInWorldBoundaries(uint y, uint x){    //regarde si les coordonnées souhaitées existe dans l'array. Renvoie true si oui sinon false.
+//regarde si les coordonnées souhaitées existe dans l'array. Renvoie true si oui sinon false.
+bool isInWorldBoundaries(uint y, uint x){    
     if(x>=0 && x<=COLONNE-1 && y>=0 && y<= LIGNE-1){
         return true;
     }
     return false;
 }
 
-void setArrayToUpdate(particule_t world[LIGNE][COLONNE]){ //chaque particule de l'array revient à l'état not updated.
+//chaque particule de l'array revient à l'état not updated.
+void setArrayToUpdate(particule_t world[LIGNE][COLONNE]){ 
     for(uint y = 0; y < LIGNE; y++){
         for(uint x = 0; x < COLONNE; x++){
             world[y][x].has_been_updated = false;
@@ -401,31 +470,31 @@ void setArrayToUpdate(particule_t world[LIGNE][COLONNE]){ //chaque particule de 
 
 void updateWater(particule_t world[LIGNE][COLONNE], uint x, uint y){
     world[y][x].has_been_updated = true;
-    if(isInWorldBoundaries(y+1,x) && world[y+1][x].id == mat_id_bois && world[y+1][x].life_time != lifetime_wood){ //éteint le bois qui est en train de bruler (check que les particules en dessous pour l'instant);
+    if(isInWorldBoundaries(y+gravity_direction,x) && world[y+gravity_direction][x].id == mat_id_bois && world[y+gravity_direction][x].life_time != lifetime_wood){ //éteint le bois qui est en train de bruler (check que les particules en dessous pour l'instant);
         world[y][x] = particule_vapeur;
-        world[y+1][x] = particule_bois;
-        world[y+1][x].life_time = lifetime_wood;
+        world[y+gravity_direction][x] = particule_bois;
+        world[y+gravity_direction][x].life_time = lifetime_wood;
     }
-    if(isInWorldBoundaries(y+1,x) && (world[y+1][x].id == mat_id_air || world[y+1][x].id == mat_id_vapeur)){ //si rien/gaz en dessous alors prise de vitesse y et /2 la vitesse x
-        world[y][x].velocity.y += 1;
+    if(isInWorldBoundaries(y+gravity_direction,x) && (world[y+gravity_direction][x].id == mat_id_air || world[y+gravity_direction][x].id == mat_id_vapeur)){ //si rien/gaz en dessous alors prise de vitesse y et /2 la vitesse x
+        world[y][x].velocity.y += gravity;
         world[y][x].velocity.x = world[y][x].velocity.x/2;
         applyVect(x,y,world,mat_id_eau);
-    }else if(isSurrounedSideBy(world, x, y, mat_id_sable) && isInWorldBoundaries(y-1,x)){ //si entouré sur les cotés par du sable alors échande de pos avec la particule de sable au dessus
-        particule_t tmp = world[y-1][x];
-        world[y-1][x] = world[y][x];
+    }else if(isSurrounedSideBy(world, x, y, mat_id_sable) && isInWorldBoundaries(y-gravity_direction,x)){ //si entouré sur les cotés par du sable alors échande de pos avec la particule de sable au dessus
+        particule_t tmp = world[y-gravity_direction][x];
+        world[y-gravity_direction][x] = world[y][x];
         world[y][x] = tmp;
     }else{
         
-        if(isInWorldBoundaries(y+1,x-1) && (world[y+1][x-1].id == mat_id_air || world[y+1][x-1].id == mat_id_vapeur)){ //si possible va en bas à gauche 
+        if(isInWorldBoundaries(y+gravity_direction,x-1) && (world[y+gravity_direction][x-1].id == mat_id_air || world[y+gravity_direction][x-1].id == mat_id_vapeur) && isNotOnAFallTrajectory(world,x-1,y+gravity_direction) ) { //si possible va en bas à gauche 
             world[y][x].velocity.x = 0;
-            world[y+1][x-1] = world[y][x];
+            world[y+gravity_direction][x-1] = world[y][x];
             world[y][x] = particule_air;  
-            applyVect(x,y,world,mat_id_eau);
-        }else if(isInWorldBoundaries(y+1,x+1) && (world[y+1][x+1].id == mat_id_air || world[y+1][x+1].id == mat_id_vapeur)){// si possible va en bas à droite
+            applyVect(x-1,y+gravity_direction,world,mat_id_eau);
+        }else if(isInWorldBoundaries(y+gravity_direction,x+1) && (world[y+gravity_direction][x+1].id == mat_id_air || world[y+gravity_direction][x+1].id == mat_id_vapeur) && isNotOnAFallTrajectory(world,x+1,y+gravity_direction)){// si possible va en bas à droite
             world[y][x].velocity.x = 0;
-            world[y+1][x+1] = world[y][x];
+            world[y+gravity_direction][x+1] = world[y][x];
             world[y][x] = particule_air;  
-            applyVect(x,y,world,mat_id_eau);
+            applyVect(x+1,y+gravity_direction,world,mat_id_eau);
         }else if(isInWorldBoundaries(y,x-1) && (world[y][x-1].id == mat_id_air || world[y][x-1].id == mat_id_vapeur) && world[y][x].velocity.x <=0){ //si rien/gaz à gauche et pas de vitesse x positive alors gagne en vitesse x vers la gauche. 
             world[y][x].velocity.x += -2;
             applyVect(x,y,world,mat_id_eau); 
@@ -434,12 +503,14 @@ void updateWater(particule_t world[LIGNE][COLONNE], uint x, uint y){
             applyVect(x,y,world,mat_id_eau);
         }else{
             world[y][x].velocity.x = 0;
+            world[y][x].velocity.y = 0;
             world[y][x].has_been_updated = true;
         }
     }
 }
 
-void setParticuleXY_10by10(particule_t world[LIGNE][COLONNE], uint mat_id, uint x, uint y){ //place les particules dans le monde (taille différente pour chaque, à améliorer)
+//place les particules dans le monde (taille différente pour chaque, à améliorer)
+void setParticuleXY_10by10(particule_t world[LIGNE][COLONNE], uint mat_id, uint x, uint y){ 
     if(isInWorldBoundaries(y,x)){
         if(mat_id == mat_id_sable){
             for(int i = -5; i<6;i = i +1){
@@ -494,8 +565,8 @@ void setParticuleXY_10by10(particule_t world[LIGNE][COLONNE], uint mat_id, uint 
 }
 
 
-
-void randomizeWorld(particule_t world[LIGNE][COLONNE]){ //chaque particules du monde devient une particule aléatoire, plus de chance pour que ce soit une particule d'air.
+//chaque particules du monde devient une particule aléatoire, plus de chance pour que ce soit une particule d'air.
+void randomizeWorld(particule_t world[LIGNE][COLONNE]){ 
     for(uint y = 0; y < LIGNE; y++){
         for(uint x = 0; x < COLONNE; x++){
             int random = rand()%8;
@@ -532,15 +603,6 @@ void updateBois(particule_t world[LIGNE][COLONNE], uint x, uint y){
 
 }
 
-void updateAir(particule_t world[LIGNE][COLONNE], uint x, uint y){ //inutile
-    world[y][x].has_been_updated = true;
-    if(isInWorldBoundaries(y-1, x) && world[y-1][x].id != mat_id_air){
-        world[y][x] = world[y-1][x];
-        world[y-1][x] = particule_air;
-        world[y][x].has_been_updated = true;
-    }
-}
-
 void updateFeu(particule_t world[LIGNE][COLONNE], uint x, uint y){
     world[y][x].has_been_updated = true;
     looseLife(world, y, x, 3, 4);
@@ -550,15 +612,15 @@ void updateFeu(particule_t world[LIGNE][COLONNE], uint x, uint y){
     if(world[y][x].life_time<=0){  
         world[y][x] = particule_air;
     }
-    if(isInWorldBoundaries(y-1,x) && world[y-1][x].id == mat_id_eau){ // si tu eau en dessous alors particule de feu et d'eau deviennent des particules de vapeur
+    if(isInWorldBoundaries(y-gravity_direction,x) && world[y-gravity_direction][x].id == mat_id_eau){ // si tu eau en dessous alors particule de feu et d'eau deviennent des particules de vapeur
         world[y][x] = particule_vapeur; 
-        world[y-1][x] = particule_vapeur; 
+        world[y-gravity_direction][x] = particule_vapeur; 
         return;
-    }else if(isInWorldBoundaries(y+1,x) && world[y+1][x].id == mat_id_eau){
-        world[y+1][x] = particule_air; 
+    }else if(isInWorldBoundaries(y+gravity_direction,x) && world[y+gravity_direction][x].id == mat_id_eau){
+        world[y+gravity_direction][x] = particule_air; 
         world[y][x] = particule_vapeur;
-        if(isInWorldBoundaries(y+2,x) && world[y+2][x].id == mat_id_air){
-            world[y+2][x] = particule_vapeur;
+        if(isInWorldBoundaries(y+(2*gravity_direction),x) && world[y+(2*gravity_direction)][x].id == mat_id_air){
+            world[y+(2*gravity_direction)][x] = particule_vapeur;
         }
         return;
     }else if(isInWorldBoundaries(y,x+1) && world[y][x+1].id == mat_id_eau){
@@ -571,30 +633,30 @@ void updateFeu(particule_t world[LIGNE][COLONNE], uint x, uint y){
         return;
     }
 
-    if(isInWorldBoundaries(y+1,x) && (world[y+1][x].id == mat_id_air || world[y+1][x].id == mat_id_vapeur) ){ //si rien en dessous prend de la vitesse verticale.
+    if(isInWorldBoundaries(y+gravity_direction,x) && (world[y+gravity_direction][x].id == mat_id_air || world[y+gravity_direction][x].id == mat_id_vapeur) ){ //si rien en dessous prend de la vitesse verticale.
         if(world[y][x].velocity.y == 0){
-            world[y][x].velocity.y = 1;
+            world[y][x].velocity.y = gravity_direction;
         }else{
-            world[y][x].velocity.y += 0.2;
+            world[y][x].velocity.y += (0.2* gravity_direction);
         }
         applyVect(x,y,world,mat_id_feu);
     }else{
     int randomInt = rand() % 2;
     world[y][x].velocity.y = 0;
         if(randomInt==0){
-            if(isInWorldBoundaries(y+1,x-1) && world[y+1][x-1].id == mat_id_air){ // suit même regles que le sable pour physique.
-                world[y+1][x-1] = world[y][x];
+            if(isInWorldBoundaries(y+gravity_direction,x-1) && world[y+gravity_direction][x-1].id == mat_id_air){ // suit même regles que le sable pour physique.
+                world[y+gravity_direction][x-1] = world[y][x];
                 world[y][x] = particule_air;        
-            }else if(isInWorldBoundaries(y+1,x+1) && world[y+1][x+1].id == mat_id_air){
-                world[y+1][x+1] = world[y][x];
+            }else if(isInWorldBoundaries(y+gravity_direction,x+1) && world[y+gravity_direction][x+1].id == mat_id_air){
+                world[y+gravity_direction][x+1] = world[y][x];
                 world[y][x] = particule_air;  
             }
         }else{
-            if(isInWorldBoundaries(y+1,x+1) && world[y+1][x+1].id == mat_id_air){
-                world[y+1][x+1] = world[y][x];
+            if(isInWorldBoundaries(y+gravity_direction,x+1) && world[y+gravity_direction][x+1].id == mat_id_air){
+                world[y+gravity_direction][x+1] = world[y][x];
                 world[y][x] = particule_air;
-            }else if(isInWorldBoundaries(y+1,x-1) && world[y+1][x-1].id == mat_id_air){
-                world[y+1][x-1] = world[y][x];
+            }else if(isInWorldBoundaries(y+gravity_direction,x-1) && world[y+gravity_direction][x-1].id == mat_id_air){
+                world[y+gravity_direction][x-1] = world[y][x];
                 world[y][x] = particule_air; 
             }
 
@@ -659,13 +721,13 @@ void applyVect(int x, int y,particule_t world[LIGNE][COLONNE], int id){
         if(rand()%2 == 0){
             if(isInWorldBoundaries(y,x-1) && world[y][x-1].id == mat_id_air){
                 world[y][x].velocity.x -= 8;
-            }else{
+            }else if(isInWorldBoundaries(y,x+1) && world[y][x+1].id == mat_id_air){
                 world[y][x].velocity.x += 8;
             }
         }else{
             if(isInWorldBoundaries(y,x+1) && world[y][x+1].id == mat_id_air){
                 world[y][x].velocity.x += 8;
-            }else{
+            }else if(isInWorldBoundaries(y,x-1) && world[y][x-1].id == mat_id_air){
                 world[y][x].velocity.x -= 8;
             }   
         }
@@ -687,22 +749,23 @@ void applyVect(int x, int y,particule_t world[LIGNE][COLONNE], int id){
             }else{
                 break;
             }
-        }
-        if(id == mat_id_vapeur && i== 2){
+            if(id == mat_id_vapeur && i== 2){
             world[tmpPosOfY][x+(1*direction)+(i*direction)].velocity.x = 2*direction;
             break;
-        }
-        if(id == mat_id_eau && i== water_spread_speed){
-            world[tmpPosOfY][x+(1*direction)+(i*direction)].velocity.x = water_spread_speed*direction;
-            break;
-        }
-        if(i == 15){
-            break;
-        }
-    } 
+            }
+            if(id == mat_id_eau && i== water_spread_speed){
+                world[tmpPosOfY][x+(1*direction)+(i*direction)].velocity.x = water_spread_speed*direction;
+                break;
+            }
+            if(i == 15){
+                break;
+            }
+        } 
+    }
 }
 
-bool catchedOnFire(int mat_id){ //renvoi true si la particule donnée prend feu en fonction de la flammabilité définie dans particules.h
+//renvoi true si la particule donnée prend feu en fonction de la flammabilité définie dans particules.h
+bool catchedOnFire(int mat_id){ 
     int flammability = 1;
     if(mat_id == mat_id_bois){
         flammability = bois_flammability;
@@ -710,7 +773,8 @@ bool catchedOnFire(int mat_id){ //renvoi true si la particule donnée prend feu 
     return (rand()%flammability == 2);
 }
 
-void burnAround(particule_t world[LIGNE][COLONNE],int y, int x){ //essais de brûler chaque particules autour des coordonnées y,x si dans limites du monde.
+//essais de brûler chaque particules autour des coordonnées y,x si dans limites du monde.
+void burnAround(particule_t world[LIGNE][COLONNE],int y, int x){ 
     if(isInWorldBoundaries(y+1,x) && catchedOnFire(world[y+1][x].id)){
         world[y+1][x].life_time --;
     }if(isInWorldBoundaries(y+1,x-1) && catchedOnFire(world[y+1][x-1].id)){
@@ -729,8 +793,8 @@ void burnAround(particule_t world[LIGNE][COLONNE],int y, int x){ //essais de br�
         world[y-1][x+1].life_time --;
     }
 }
-
-void looseLife(particule_t world[LIGNE][COLONNE],int y, int x, int life_lost, int chance){ // fais perdre "life_lost" vie à la particule avec 1/chance chance. 
+// fais perdre "life_lost" vie à la particule avec 1/chance chance. 
+void looseLife(particule_t world[LIGNE][COLONNE],int y, int x, int life_lost, int chance){ 
     if(rand()%chance == 1){
         world[y][x].life_time = world[y][x].life_time - life_lost; 
     }
@@ -738,7 +802,7 @@ void looseLife(particule_t world[LIGNE][COLONNE],int y, int x, int life_lost, in
 
 void updateVapeur(particule_t world[LIGNE][COLONNE], uint x, uint y){
     world[y][x].has_been_updated = true;
-    if(isInWorldBoundaries(y+1,x)&&isInWorldBoundaries(y-1,x) && world[y+1][x].id == mat_id_air && world[y-1][x].id == mat_id_vapeur){ // si vapeur au dessus et air en dessous alors perte de beaucoup de vie.(pour éviter les gros nuages)
+    if(isInWorldBoundaries(y+gravity_direction,x)&&isInWorldBoundaries(y-gravity_direction,x) && world[y+gravity_direction][x].id == mat_id_air && world[y-gravity_direction][x].id == mat_id_vapeur){ // si vapeur au dessus et air en dessous alors perte de beaucoup de vie.(pour éviter les gros nuages)
         looseLife(world, y, x, 30, 5);
     }
     looseLife(world, y, x, 12, 20);
@@ -746,22 +810,22 @@ void updateVapeur(particule_t world[LIGNE][COLONNE], uint x, uint y){
         world[y][x] = particule_air;
         return;
     }
-    if(isInWorldBoundaries(y-1, x) && world[y-1][x].id == mat_id_air){ //monte de 1 case par update si air au dessus.
-        particule_t tmp = world[y-1][x];
-        world[y-1][x] = world[y][x];
+    if(isInWorldBoundaries(y-gravity_direction, x) && world[y-gravity_direction][x].id == mat_id_air){ //monte de 1 case par update si air au dessus.
+        particule_t tmp = world[y-gravity_direction][x];
+        world[y-gravity_direction][x] = world[y][x];
         world[y][x] = tmp;
     }else if(rand()%3==1){
         
-        if(isInWorldBoundaries(y-1,x-1) && world[y-1][x-1].id == mat_id_air){ //si air en haut à gauche alors échange
+        if(isInWorldBoundaries(y-gravity_direction,x-1) && world[y-gravity_direction][x-1].id == mat_id_air){ //si air en haut à gauche alors échange
             world[y][x].velocity.x = 0;
-            particule_t tmp = world[y-1][x-1];
-            world[y-1][x-1] = world[y][x];
+            particule_t tmp = world[y-gravity_direction][x-1];
+            world[y-gravity_direction][x-1] = world[y][x];
             world[y][x] = tmp;
             applyVect(x,y,world,mat_id_vapeur);  
-        }else if(isInWorldBoundaries(y-1,x+1) && world[y-1][x+1].id == mat_id_air){//si air en haut à droite alors échange
+        }else if(isInWorldBoundaries(y-gravity_direction,x+1) && world[y-gravity_direction][x+1].id == mat_id_air){//si air en haut à droite alors échange
             world[y][x].velocity.x = 0;
-            particule_t tmp = world[y-1][x+1];
-            world[y-1][x+1] = world[y][x];
+            particule_t tmp = world[y-gravity_direction][x+1];
+            world[y-gravity_direction][x+1] = world[y][x];
             world[y][x] = tmp;  
             applyVect(x,y,world,mat_id_vapeur);
         }else{
@@ -778,7 +842,8 @@ void updateVapeur(particule_t world[LIGNE][COLONNE], uint x, uint y){
     }
 }
 
-void displayParticuleInfos(particule_t world[LIGNE][COLONNE], uint x, uint y){ //print quelques infos sur la particule.
+//print quelques infos sur la particule.
+void displayParticuleInfos(particule_t world[LIGNE][COLONNE], uint x, uint y){ 
     if(isInWorldBoundaries(y,x)){
     printf("id = %d\n",world[y][x].id);
     printf("lifetime = %f\n",world[y][x].life_time);
@@ -787,7 +852,8 @@ void displayParticuleInfos(particule_t world[LIGNE][COLONNE], uint x, uint y){ /
     }
 }
 
-void highlightParticule(particule_t world[LIGNE][COLONNE], uint x, uint y, int R, int G, int B){ //change la couleur d'une particule 
+//change la couleur d'une particule 
+void highlightParticule(particule_t world[LIGNE][COLONNE], uint x, uint y, int R, int G, int B){ 
     if(isInWorldBoundaries(y,x)){
         world[y][x].color.R = R;
         world[y][x].color.G = G;
@@ -795,6 +861,7 @@ void highlightParticule(particule_t world[LIGNE][COLONNE], uint x, uint y, int R
     }
 }
 
+//renvoie true si toutes les particules autour sont de type mat_id. (si mat_id = 1 et que true renvoyer alors la particule est entourée de sable)
 bool isSurrounedAroundBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int mat_id){ //renvoie true si toutes les particules autour sont de type mat_id. (si mat_id = 1 et que true renvoyer alors la particule est entourée de sable)
     bool surronded = true;
     if(isInWorldBoundaries(y-1,x-1) && world[y-1][x-1].id != mat_id){
@@ -816,8 +883,8 @@ bool isSurrounedAroundBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int 
     }
     return surronded;
 }
-
-bool isSurrounedSideBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int mat_id){ //Similaire à isSurrounedAroundBy() mais ne regarde que droite,gauche,haut,bas.
+//Similaire à isSurrounedAroundBy() mais ne regarde que droite,gauche,haut,bas.
+bool isSurrounedSideBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int mat_id){ 
     bool surronded = true;
     if(isInWorldBoundaries(y-1,x) && world[y-1][x].id != mat_id){
         surronded = false;
@@ -831,8 +898,23 @@ bool isSurrounedSideBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int ma
     return surronded;
 }
 
+bool isNotOnAFallTrajectory(particule_t world[LIGNE][COLONNE], uint x, uint y){
+    for(int i = 0; i<2;i++){ //regarde les 2 particules au dessus
+        if(isInWorldBoundaries(y-i,x) && world[y-i][x].id == mat_id_eau){
+            return true;
+        }else if(isInWorldBoundaries(y-i,x) && world[y-i][x].id != mat_id_air && world[y-i][x].id != mat_id_vapeur){
+            if(world[y-i][x].velocity.y + gravity >=i){
+                return false;
+            }else{
+                return true;
+            }
+        }
+    }
+    return true;
+}
 
-void burningColor(particule_t world[LIGNE][COLONNE], int y, int x,int mat_id){ //Selon la particule permet d'alterner les couleurs pour donner une impression de brûlure.
+//Selon la particule permet d'alterner les couleurs pour donner une impression de brûlure.
+void burningColor(particule_t world[LIGNE][COLONNE], int y, int x,int mat_id){
     if(isInWorldBoundaries(y,x)){
         if(mat_id == mat_id_bois){
             int R,G,B;
@@ -891,5 +973,16 @@ void burningColor(particule_t world[LIGNE][COLONNE], int y, int x,int mat_id){ /
             world[y][x].color.G = G + (randG*minusOrPlusG);
             world[y][x].color.B = B + (randB*minusOrPlusB);    
         }
+    }
+}
+
+void setGravity(int valeur){
+    gravity = valeur;
+    if(gravity>0){
+        gravity_direction = 1;
+    }else if(gravity<0){
+        gravity_direction = -1;
+    }else{
+        gravity_direction = 0;
     }
 }

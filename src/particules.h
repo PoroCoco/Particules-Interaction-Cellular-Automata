@@ -21,6 +21,11 @@
 #define lifetime_feu 355
 #define lifetime_vapeur 150
 
+
+#define def_gravity 1
+int gravity;
+int gravity_direction;
+
 typedef unsigned int uint;
 
 struct vector{
