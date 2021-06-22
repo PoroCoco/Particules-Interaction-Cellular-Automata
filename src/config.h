@@ -1,0 +1,11 @@
+#define WINDOW_WIDTH 1000
+#define WINDOW_HEIGHT 800
+#define PIXEL_WIDTH 4
+#define PIXEL_HEIGHT 4
+
+#define COLONNE 250  // = WINDOW_WIDTH / PIXEL_WIDTH
+#define LIGNE 200  // = WINDOW_HEIGHT / PIXEL_HEIGHT
+
+#define TARGET_R 0
+#define TARGET_G 255
+#define TARGET_B 0

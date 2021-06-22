@@ -11,23 +11,22 @@
 //besoin d'avoir chute libre de sable et eau lorsque sol dessous enlevé. Pour avoir cela la regle "peux aller en bas a gauche/droite" doit avoir une condition supplémentaire sans trop la limiter.
 
 
+//particule explorer avec particule cible, utilisation pathfinding A* pour aller à cible.
+//besoin de faire une barre d'outils car trop de touches utilisées.
+
 //gcc -std=c99 -Wall src/main.c -o bin/prog -I include -L lib -lmingw32 -lSDL2main -lSDL2
+
+//particule.h->pathfinding.h
 #include <SDL.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "particules.h"
-
+#include "config.h"
+#include "pathfinding.h"
 // SDL_RENDERER_SOFTWARE; SDL_RENDERER_ACCELERATED; SDL_RENDERER_PRESENTVSYNC
 
 
-#define WINDOW_WIDTH 1000
-#define WINDOW_HEIGHT 800
-#define PIXEL_WIDTH 2
-#define PIXEL_HEIGHT 2
 
-#define COLONNE 500  // = WINDOW_WIDTH / PIXEL_WIDTH
-#define LIGNE 400  // = WINDOW_HEIGHT / PIXEL_HEIGHT
 
 
 
@@ -57,7 +56,7 @@ void updateVapeur(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
 
 
-bool isInWorldBoundaries(uint x, uint y);
+
 
 void setArrayToUpdate(particule_t world[LIGNE][COLONNE]);
 
@@ -84,6 +83,7 @@ void burningColor(particule_t world[LIGNE][COLONNE], int y, int x,int mat_id);
 bool isNotOnAFallTrajectory(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
 void setGravity(int valeur);
+void displayTargetPos(particule_t world[LIGNE][COLONNE]);
 
 int main(int argc, char ** argv){
  
@@ -187,6 +187,11 @@ int main(int argc, char ** argv){
                         elementSelected = mat_id_vapeur;
                         continue;
 
+                    case SDLK_m:
+                        printf("appui n : élément mis = EXPLORER\n");
+                        elementSelected = mat_id_explorer;
+                        continue;
+
                     case SDLK_l:
                         updateArray(world);
                         continue;
@@ -204,6 +209,19 @@ int main(int argc, char ** argv){
                     case SDLK_g:
                         printf("Changement gravité\n");
                         setGravity(-gravity);
+                        continue;
+
+                    case SDLK_t:
+                        displayTargetPos(world);
+                        continue;
+
+                    case SDLK_y:
+                        elementSelected = -3;
+                        continue;
+
+                    case SDLK_u:
+                        elementSelected = -3;
+                        GOTOPOS = 1;
                         continue;
 
                     default:
@@ -230,11 +248,11 @@ int main(int argc, char ** argv){
             }
         }
         if(button_mousedown){
-            printf("Clique en %d / %d\n",event.button.x, event.button.y);
+            printf("Clique en %d / %d\n",event.button.x/PIXEL_WIDTH, event.button.y/PIXEL_HEIGHT);
             if(elementSelected == -1){
                 displayParticuleInfos(world,event.button.x/PIXEL_WIDTH,event.button.y/PIXEL_HEIGHT);
             }else if(elementSelected==-2){
-                highlightParticule(world, event.button.x/PIXEL_WIDTH, event.button.y/PIXEL_HEIGHT,0,0,0);
+                highlightParticule(world, event.button.x/PIXEL_WIDTH, event.button.y/PIXEL_HEIGHT,TARGET_R,TARGET_G,TARGET_B);
             }else{
             setParticuleXY_10by10(world, elementSelected , event.button.x/PIXEL_WIDTH, event.button.y/PIXEL_HEIGHT);
             }
@@ -327,6 +345,8 @@ void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de 
                             updateFeu(world,x,y);
                         }else if(world[y][x].id == mat_id_vapeur){
                             updateVapeur(world,x,y);
+                        }else if(world[y][x].id == mat_id_explorer){
+                            updateExplorer(world,x,y);
                         }
                         //}
                     }
@@ -346,6 +366,8 @@ void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de 
                             updateFeu(world,x,y);
                         }else if(world[y][x].id == mat_id_vapeur){
                             updateVapeur(world,x,y);
+                        }else if(world[y][x].id == mat_id_explorer){
+                            updateExplorer(world,x,y);
                         }
                         
                         //}
@@ -368,6 +390,8 @@ void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de 
                             updateFeu(world,x,y);
                         }else if(world[y][x].id == mat_id_vapeur){
                             updateVapeur(world,x,y);
+                        }else if(world[y][x].id == mat_id_explorer){
+                            updateExplorer(world,x,y);
                         }
                         //}
                     }
@@ -387,6 +411,8 @@ void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de 
                             updateFeu(world,x,y);
                         }else if(world[y][x].id == mat_id_vapeur){
                             updateVapeur(world,x,y);
+                        }else if(world[y][x].id == mat_id_explorer){
+                            updateExplorer(world,x,y);
                         }
                         
                         //}
@@ -450,13 +476,6 @@ void updateSand(particule_t world[LIGNE][COLONNE], uint x, uint y){
 
         }    
     }
-}
-//regarde si les coordonnées souhaitées existe dans l'array. Renvoie true si oui sinon false.
-bool isInWorldBoundaries(uint y, uint x){    
-    if(x>=0 && x<=COLONNE-1 && y>=0 && y<= LIGNE-1){
-        return true;
-    }
-    return false;
 }
 
 //chaque particule de l'array revient à l'état not updated.
@@ -560,6 +579,8 @@ void setParticuleXY_10by10(particule_t world[LIGNE][COLONNE], uint mat_id, uint 
                     }
                 }
             }
+        }else if(mat_id == mat_id_explorer){
+            world[y][x] = particule_explorer;
         }
     }
 }
@@ -852,14 +873,7 @@ void displayParticuleInfos(particule_t world[LIGNE][COLONNE], uint x, uint y){
     }
 }
 
-//change la couleur d'une particule 
-void highlightParticule(particule_t world[LIGNE][COLONNE], uint x, uint y, int R, int G, int B){ 
-    if(isInWorldBoundaries(y,x)){
-        world[y][x].color.R = R;
-        world[y][x].color.G = G;
-        world[y][x].color.B = B;
-    }
-}
+
 
 //renvoie true si toutes les particules autour sont de type mat_id. (si mat_id = 1 et que true renvoyer alors la particule est entourée de sable)
 bool isSurrounedAroundBy(particule_t world[LIGNE][COLONNE], uint x, uint y, int mat_id){ //renvoie true si toutes les particules autour sont de type mat_id. (si mat_id = 1 et que true renvoyer alors la particule est entourée de sable)
@@ -985,4 +999,11 @@ void setGravity(int valeur){
     }else{
         gravity_direction = 0;
     }
+}
+
+
+void displayTargetPos(particule_t world[LIGNE][COLONNE]){
+    int x,y;
+    getTargetPos(world,&x,&y);
+    printf("x = %d, y = %d\n",x,y);
 }
