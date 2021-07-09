@@ -8,6 +8,7 @@ Commandes : <br>
   -p : click souris permet de target une particule, change sa couleur en vert et la particule Explorer cherchera le chemin vers la target<br>
   -r : Randomize chaque particules de l'écran <br>
   -g : Inverse la gravité <br>
+  -h : Permet de créer un labyrinthe aléatoire avec 2 cliques : Le premier définie le coin haut gauche puis le second le coin bas droit du labyrinthe  <br>
   
 Choix des particules :<br>
 -w : Air<br>
