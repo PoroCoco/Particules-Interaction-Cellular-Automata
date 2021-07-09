@@ -22,7 +22,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "config.h"
-#include "pathfinding.h"
+#include "pathfinding.c"
+
 // SDL_RENDERER_SOFTWARE; SDL_RENDERER_ACCELERATED; SDL_RENDERER_PRESENTVSYNC
 
 
@@ -85,9 +86,15 @@ bool isNotOnAFallTrajectory(particule_t world[LIGNE][COLONNE], uint x, uint y);
 void setGravity(int valeur);
 void displayTargetPos(particule_t world[LIGNE][COLONNE]);
 
-int main(int argc, char ** argv){
- 
 
+int main(int argc, char ** argv){
+
+
+    vector_t first_point; 
+    vector_t second_point; 
+    bool recording_point_second =false;
+    bool recording_point = false;
+    bool b;
     SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
     static particule_t world[LIGNE][COLONNE];
@@ -220,8 +227,13 @@ int main(int argc, char ** argv){
                         continue;
 
                     case SDLK_u:
-                        elementSelected = -3;
+                        elementSelected = -4;
                         GOTOPOS = 1;
+                        continue;
+
+                    case SDLK_h:
+                        printf("Choissisez les extremites du labyrinthe\n");
+                        elementSelected = -3;
                         continue;
 
                     default:
@@ -248,14 +260,43 @@ int main(int argc, char ** argv){
             }
         }
         if(button_mousedown){
-            printf("Clique en %d / %d\n",event.button.x/PIXEL_WIDTH, event.button.y/PIXEL_HEIGHT);
+            //printf("Clique en %d / %d\n",event.button.x/PIXEL_WIDTH, event.button.y/PIXEL_HEIGHT);
             if(elementSelected == -1){
                 displayParticuleInfos(world,event.button.x/PIXEL_WIDTH,event.button.y/PIXEL_HEIGHT);
-            }else if(elementSelected==-2){
+            }else if(elementSelected == -2){
                 highlightParticule(world, event.button.x/PIXEL_WIDTH, event.button.y/PIXEL_HEIGHT,TARGET_R,TARGET_G,TARGET_B);
+            }else if(elementSelected == -3){
+                if(recording_point == false){
+                    first_point.x = event.button.x/PIXEL_WIDTH;
+                    first_point.y = event.button.y/PIXEL_HEIGHT;
+                    recording_point = true;
+                }
+                if(recording_point_second){
+                    second_point.x = event.button.x/PIXEL_WIDTH;
+                    second_point.y = event.button.y/PIXEL_HEIGHT;
+                    recording_point = false;
+                    recording_point_second = false;
+                    if(first_point.x>= second_point.x || first_point.y >= second_point.y){
+                        printf("Coordonnees donnees impossible\n");
+                        second_point.x = 0;
+                        second_point.y = 0;
+                        first_point.x = 0;
+                        first_point.y = 0;
+                    }else{
+                        b = generateMaze(world, first_point.x, first_point.y, second_point.x - first_point.x, second_point.y - first_point.y, mat_id_bois);
+                        if(b){
+                            printf("generated maze\n");
+                        }else{
+                            printf("maze couldn't generate\n");
+                        }
+                    }
+                    
+                }
             }else{
-            setParticuleXY_10by10(world, elementSelected , event.button.x/PIXEL_WIDTH, event.button.y/PIXEL_HEIGHT);
+                setParticuleXY_10by10(world, elementSelected , event.button.x/PIXEL_WIDTH, event.button.y/PIXEL_HEIGHT);
             }
+        }else if(elementSelected == -3 && recording_point){
+            recording_point_second = true;
         }
 
         updateArray(world);

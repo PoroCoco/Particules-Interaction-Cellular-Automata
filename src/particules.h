@@ -6,6 +6,7 @@
 #define vapeur_max_y_velocity 3
 
 //def des id de chaques particules
+#define particules_number 7
 #define mat_id_air 0
 #define mat_id_sable 1
 #define mat_id_eau 2
