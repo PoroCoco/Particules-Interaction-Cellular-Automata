@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <math.h>
 #include "config.h"
 #include "pathfinding.c"
 
@@ -55,6 +56,7 @@ void updateAir(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
 void updateVapeur(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
+void updatePlayer(particule_t world[LIGNE][COLONNE], uint x, uint y);
 
 
 
@@ -86,6 +88,10 @@ bool isNotOnAFallTrajectory(particule_t world[LIGNE][COLONNE], uint x, uint y);
 void setGravity(int valeur);
 void displayTargetPos(particule_t world[LIGNE][COLONNE]);
 
+bool deletePlayerParticule(particule_t world[LIGNE][COLONNE]);
+
+
+int playerMovement;
 
 int main(int argc, char ** argv){
 
@@ -120,13 +126,14 @@ int main(int argc, char ** argv){
         SDL_ExitWithError("Creation rendu echouee",window,renderer);
     }
 
-
     SDL_bool program_launched = SDL_TRUE;
     //fillArrayWithMat(world,0);
 
     while(program_launched)
     {
+        playerMovement = 4;
         SDL_Event event;
+        uint start_time = SDL_GetPerformanceCounter();
         bool button_mousedown;
         while(SDL_PollEvent(&event))
         {
@@ -219,7 +226,8 @@ int main(int argc, char ** argv){
                         continue;
 
                     case SDLK_t:
-                        displayTargetPos(world);
+                        printf("appui t : élément mis = PLAYER\n");
+                        elementSelected = mat_id_player;
                         continue;
 
                     case SDLK_y:
@@ -234,6 +242,22 @@ int main(int argc, char ** argv){
                     case SDLK_h:
                         printf("Choissisez les extremites du labyrinthe\n");
                         elementSelected = -3;
+                        continue;
+                    
+                    case SDLK_DOWN:
+                        playerMovement = 0;
+                        continue;
+
+                    case SDLK_LEFT:
+                        playerMovement = 1;
+                        continue;
+                    
+                    case SDLK_UP:
+                        playerMovement = 2;
+                        continue;
+
+                    case SDLK_RIGHT:
+                        playerMovement = 3;
                         continue;
 
                     default:
@@ -303,6 +327,20 @@ int main(int argc, char ** argv){
         renderArray(renderer,world,window);
         SDL_RenderPresent(renderer);
         setArrayToUpdate(world);
+        uint end_time = SDL_GetPerformanceCounter();
+        float freq_time = SDL_GetPerformanceFrequency();
+        float elapsed = (end_time - start_time) / freq_time;
+        float elapsedMS = (end_time - start_time) / freq_time*1000.0;
+        float FPS_counter = 1.0/elapsed;
+        float fps_delay = floor(16.666 - elapsedMS); 
+        if(fps_delay>0){
+            SDL_Delay(fps_delay);
+            if(SHOW_FPS){
+                printf("fps : %f\n",(1.0/(elapsedMS+fps_delay))*1000.0);
+            }
+        }else if (SHOW_FPS){
+            printf("fps : %f\n",FPS_counter);
+        }
     }
 
 
@@ -388,8 +426,9 @@ void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de 
                             updateVapeur(world,x,y);
                         }else if(world[y][x].id == mat_id_explorer){
                             updateExplorer(world,x,y);
+                        }else if(world[y][x].id == mat_id_player){
+                            updatePlayer(world,x,y);
                         }
-                        //}
                     }
                 }
             }
@@ -409,6 +448,8 @@ void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de 
                             updateVapeur(world,x,y);
                         }else if(world[y][x].id == mat_id_explorer){
                             updateExplorer(world,x,y);
+                        }else if(world[y][x].id == mat_id_player){
+                            updatePlayer(world,x,y);
                         }
                         
                         //}
@@ -433,6 +474,8 @@ void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de 
                             updateVapeur(world,x,y);
                         }else if(world[y][x].id == mat_id_explorer){
                             updateExplorer(world,x,y);
+                        }else if(world[y][x].id == mat_id_player){
+                            updatePlayer(world,x,y);
                         }
                         //}
                     }
@@ -454,6 +497,8 @@ void updateArray(particule_t world[LIGNE][COLONNE]){ //parcours l'array soit de 
                             updateVapeur(world,x,y);
                         }else if(world[y][x].id == mat_id_explorer){
                             updateExplorer(world,x,y);
+                        }else if(world[y][x].id == mat_id_player){
+                            updatePlayer(world,x,y);
                         }
                         
                         //}
@@ -622,6 +667,9 @@ void setParticuleXY_10by10(particule_t world[LIGNE][COLONNE], uint mat_id, uint 
             }
         }else if(mat_id == mat_id_explorer){
             world[y][x] = particule_explorer;
+        }else if(mat_id == mat_id_player){
+            deletePlayerParticule(world);
+            world[y][x] = particule_player;
         }
     }
 }
@@ -1047,4 +1095,46 @@ void displayTargetPos(particule_t world[LIGNE][COLONNE]){
     int x,y;
     getTargetPos(world,&x,&y);
     printf("x = %d, y = %d\n",x,y);
+}
+
+bool deletePlayerParticule(particule_t world[LIGNE][COLONNE]){
+    for(uint y = 0; y < LIGNE; y++){
+        for(uint x = 0; x < COLONNE; x++){
+            if(world[y][x].id == mat_id_player){
+                world[y][x] = particule_air;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+void updatePlayer(particule_t world[LIGNE][COLONNE], uint x, uint y){
+    world[y][x].has_been_updated = true;
+    if(playerMovement == 0){
+        if(isInWorldBoundaries(y+1,x) && world[y+1][x].id == mat_id_air){
+            particule_t tmp = world[y][x];
+            world[y][x] = world[y+1][x];
+            world[y+1][x] = tmp;
+        }
+    }else if(playerMovement == 1){
+        if(isInWorldBoundaries(y,x-1) && world[y][x-1].id == mat_id_air){
+            particule_t tmp = world[y][x];
+            world[y][x] = world[y][x-1];
+            world[y][x-1] = tmp;
+        }
+    }else if(playerMovement == 2){
+        if(isInWorldBoundaries(y-1,x) && world[y-1][x].id == mat_id_air){
+            particule_t tmp = world[y][x];
+            world[y][x] = world[y-1][x];
+            world[y-1][x] = tmp;
+        }  
+    }else if(playerMovement == 3){
+        if(isInWorldBoundaries(y,x+1) && world[y][x+1].id == mat_id_air){
+            particule_t tmp = world[y][x];
+            world[y][x] = world[y][x+1];
+            world[y][x+1] = tmp;
+        }    
+    }
 }
