@@ -14,6 +14,7 @@
 #define mat_id_feu 4
 #define mat_id_vapeur 5
 #define mat_id_explorer 6
+#define mat_id_player 7
 
 //flammabilité des particules
 #define bois_flammability 40
@@ -37,10 +38,10 @@ struct vector{
 typedef struct vector vector_t;
 
 struct color{
-    uint R;
-    uint G;
-    uint B;
-    uint ALPHA;
+    unsigned short int R;
+    unsigned short int G;
+    unsigned short int B;
+    unsigned short int ALPHA;
 };
 typedef struct color color_t;
 
@@ -48,12 +49,11 @@ color_t RED = {255,0,0,255};
 
 
 struct particule{
+    color_t color;
+    vector_t velocity;
     unsigned int id;
     float life_time;
-    vector_t velocity;
-    color_t color;
     bool has_been_updated;
-
 };
 typedef struct particule particule_t;
 
@@ -86,3 +86,4 @@ struct particule particule_bois = { .id = mat_id_bois, .life_time = lifetime_woo
 struct particule particule_feu = { .id = mat_id_feu, .life_time = lifetime_feu, .velocity = {.x = 0, .y = 0}, .color = {255,92,15,255}, .has_been_updated = false};
 struct particule particule_vapeur = { .id = mat_id_vapeur, .life_time = lifetime_vapeur, .velocity = {.x = 0, .y = 0}, .color = {220,220,220,125}, .has_been_updated = false};
 struct particule particule_explorer = { .id = mat_id_explorer, .life_time = -1, .velocity = {.x = 0, .y = 0}, .color = {255,255,255,255}, .has_been_updated = false};
+struct particule particule_player = { .id = mat_id_player, .life_time = -1, .velocity = {.x = 0, .y = 0}, .color = {255,255,255,255}, .has_been_updated = false};
