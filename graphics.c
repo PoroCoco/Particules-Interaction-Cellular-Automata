@@ -19,7 +19,7 @@ graphics_context* graphics_init(uint32_t screen_width, uint32_t screen_height, u
 
     InitWindow(screen_width, screen_height, "raylib [core] example - basic window");
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    SetTargetFPS(144);               // Set our game to run at 60 frames-per-second
 
     graphics_context * context = malloc(sizeof(*context));
     check_malloc(context);
@@ -49,15 +49,8 @@ void graphics_render(graphics_context* context, const automata* autom){
     uint64_t world_size = automata_get_size(autom);
     for (uint64_t i = 0; i < world_size; i++)
     {
-        int index = i * 4;
-
-        context->texture_bytes[index] = rand()%255;
-
-        context->texture_bytes[index + 1] = rand()%255;
-
-        context->texture_bytes[index + 2] = rand()%255;
-
-        context->texture_bytes[index + 3] = rand()%255;
+        if (!automata_index_updated(autom, i)) continue;
+        uint32_t index = i * 4;
 
         enum particule_type t = automata_get_particule_type(autom, i);
         switch (t)

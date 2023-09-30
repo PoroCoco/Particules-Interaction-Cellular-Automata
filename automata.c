@@ -1,3 +1,6 @@
+#include <stdbool.h>
+#include <string.h>
+
 #include "automata.h"
 
 #define aut_idx(autom, row, col) ((((autom)->width)*(row)) + (col))
@@ -9,7 +12,7 @@ typedef struct automata{
     uint32_t current_frame;
     particule *world;
     uint32_t world_size;
-
+    bool *updated;
 
 } automata;
 
@@ -22,6 +25,9 @@ automata* automata_init(uint32_t width, uint32_t height){
     autom->world = malloc(sizeof(*autom->world) * width * height);
     check_malloc(autom->world);
     autom->world_size = width * height;
+    autom->updated = malloc(sizeof(*autom->updated) * width * height);
+    check_malloc(autom->updated);
+    memset(autom->updated, true, autom->world_size);
 
     for (uint32_t i = 0; i < autom->world_size; i++)
         autom->world[i] = particule_create(TYPE_AIR);
@@ -38,22 +44,32 @@ automata* automata_init(uint32_t width, uint32_t height){
 }
 
 void automata_update(automata* autom){
+    memset(autom->updated, false, autom->world_size);
+
     for (uint32_t i = autom->world_size -1 ; i != 0; i--)
     {
-    
         if(autom->world[i].type == TYPE_SAND){
             if (i + autom->width < autom->world_size && autom->world[i + autom->width].type == TYPE_AIR){
                 particule tmp = autom->world[i + autom->width];
                 autom->world[i + autom->width] = autom->world[i];
                 autom->world[i] = tmp;
+                autom->updated[i] = true;
+                autom->updated[i + autom->width] = true;
+
             }else if(i + autom->width + 1 < autom->world_size && autom->world[i + autom->width + 1].type == TYPE_AIR){
                 particule tmp = autom->world[i + autom->width + 1];
                 autom->world[i + autom->width + 1] = autom->world[i];
                 autom->world[i] = tmp;
+                autom->updated[i] = true;
+                autom->updated[i + autom->width + 1] = true;
+
             }else if(i + autom->width - 1 < autom->world_size && autom->world[i + autom->width - 1].type == TYPE_AIR){
                 particule tmp = autom->world[i + autom->width - 1];
                 autom->world[i + autom->width - 1] = autom->world[i];
                 autom->world[i] = tmp;
+                autom->updated[i] = true;
+                autom->updated[i + autom->width - 1] = true;
+
             }
         }
     }
@@ -71,5 +87,11 @@ uint32_t automata_get_size(const automata* autom){
 }
 
 enum particule_type automata_get_particule_type(const automata* autom, uint32_t index){
+    assert(index < autom->world_size);
     return autom->world[index].type;
+}
+
+bool automata_index_updated(const automata* autom, uint32_t index){
+    assert(index < autom->world_size);
+    return autom->updated[index];
 }
