@@ -15,8 +15,14 @@ void automata_cleanup(automata* autom);
 
 uint32_t automata_get_size(const automata* autom);
 
+uint32_t automata_get_row_count(const automata* autom);
+
+uint32_t automata_get_col_count(const automata* autom);
+
 enum particule_type automata_get_particule_type(const automata* autom, uint32_t index);
 
 bool automata_index_updated(const automata* autom, uint32_t index);
+
+void automata_set_particule(const automata* autom, uint32_t index, particule p);
 
 #endif // _AUTOMATA_H__

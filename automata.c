@@ -34,10 +34,10 @@ automata* automata_init(uint32_t width, uint32_t height){
     
 
     for (size_t i = 0; i < width; i++)
-        autom->world[aut_idx(autom, 10, i)] = particule_create(TYPE_SAND);
+        autom->world[aut_idx(autom, autom->height/4, i)] = particule_create(TYPE_SAND);
     
     for (size_t i = 0; i < height; i++)
-        autom->world[aut_idx(autom, i, 500)] = particule_create(TYPE_SAND);
+        autom->world[aut_idx(autom, i, autom->width/2)] = particule_create(TYPE_SAND);
 
 
     return autom;
@@ -72,12 +72,15 @@ void automata_update(automata* autom){
 
             }
         }
+
+        
     }
     return;
 }
 
 void automata_cleanup(automata* autom){
     if (autom) free(autom->world);
+    if (autom) free(autom->updated);
     free(autom);
 }
 
@@ -91,7 +94,20 @@ enum particule_type automata_get_particule_type(const automata* autom, uint32_t 
     return autom->world[index].type;
 }
 
+void automata_set_particule(const automata* autom, uint32_t index, particule p){
+    assert(index < autom->world_size);
+    autom->world[index] = p;
+}
+
 bool automata_index_updated(const automata* autom, uint32_t index){
     assert(index < autom->world_size);
     return autom->updated[index];
+}
+
+uint32_t automata_get_row_count(const automata* autom){
+    return autom->height;
+}
+
+uint32_t automata_get_col_count(const automata* autom){
+    return autom->width;
 }
