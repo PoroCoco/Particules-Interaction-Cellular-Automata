@@ -25,6 +25,7 @@ int main(int argc, char const *argv[])
     {
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) input_spawn_particules(autom, GetMousePosition(), scale);
+        if (IsKeyPressed(KEY_N)) input_cycle_current_particule();
         
         TIME_BLOCK_EXEC("update", automata_update(autom););
         TIME_BLOCK_EXEC("render", graphics_render(context, autom););

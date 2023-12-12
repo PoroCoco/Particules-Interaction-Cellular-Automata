@@ -25,4 +25,6 @@ bool automata_index_updated(const automata* autom, uint32_t index);
 
 void automata_set_particule(const automata* autom, uint32_t index, particule p);
 
+particule automata_get_particule(const automata* autom, uint32_t index);
+
 #endif // _AUTOMATA_H__

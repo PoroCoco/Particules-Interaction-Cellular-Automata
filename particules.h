@@ -3,10 +3,16 @@
 
 #include "utils.h"
 
+#define PART_HEATER_TEMP 3000
+#define PART_COOLER_TEMP 0
+
 
 enum particule_type{
     TYPE_AIR,
-    TYPE_SAND
+    TYPE_SAND,
+    TYPE_HEATER,
+    TYPE_COOLER,
+    TYPE_COUNT
 };
 
 typedef struct particule{

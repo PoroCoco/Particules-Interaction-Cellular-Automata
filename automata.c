@@ -2,19 +2,10 @@
 #include <string.h>
 
 #include "automata.h"
+#include "automata_impl.h"
+#include "temperature.h"
 
-#define aut_idx(autom, row, col) ((((autom)->width)*(row)) + (col))
 
-
-typedef struct automata{
-    uint32_t width;
-    uint32_t height;
-    uint32_t current_frame;
-    particule *world;
-    uint32_t world_size;
-    bool *updated;
-
-} automata;
 
 automata* automata_init(uint32_t width, uint32_t height){
     automata *autom = malloc(sizeof(*autom));
@@ -72,8 +63,7 @@ void automata_update(automata* autom){
 
             }
         }
-
-        
+        temperature_update(autom, i);
     }
     return;
 }
@@ -110,4 +100,9 @@ uint32_t automata_get_row_count(const automata* autom){
 
 uint32_t automata_get_col_count(const automata* autom){
     return autom->width;
+}
+
+particule automata_get_particule(const automata* autom, uint32_t index){
+    assert(index < autom->world_size);
+    return autom->world[index];
 }
