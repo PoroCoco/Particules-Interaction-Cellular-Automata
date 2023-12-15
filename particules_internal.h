@@ -6,6 +6,8 @@
 enum particule_type{
     TYPE_AIR,
     TYPE_SAND,
+    TYPE_HEATER,
+    TYPE_COOLER,
     TYPE_COUNT
 };
 

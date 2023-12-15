@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "automata_internal.h"
+#include "automata_impl.h"
 #include "particules_internal.h"
 #include "particules.h"
 
@@ -37,8 +37,17 @@ void update_sand(automata *autom, uint32_t index){
     }
 }
 
+void update_heater(automata *autom, uint32_t index){
+    return;
+}
+
+void update_cooler(automata *autom, uint32_t index){
+    return;
+}
+
+
 particule particule_create(enum particule_type type){
-    particule p = {.type = type};
+    particule p = {.type = type, .temperature = rand()%300};
     switch (type)
     {
         case TYPE_AIR:
@@ -47,6 +56,15 @@ particule particule_create(enum particule_type type){
         case TYPE_SAND:
             p.update = update_sand;
             break;
+        case TYPE_HEATER:
+            p.update = update_heater;
+            p.temperature = PART_HEATER_TEMP;
+            break;
+        case TYPE_COOLER:
+            p.update = update_cooler;
+            p.temperature = PART_COOLER_TEMP;
+            break;
+            
         default:
             break;
     }

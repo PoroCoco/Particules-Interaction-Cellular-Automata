@@ -10,6 +10,6 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG ")   # use CMake option: -DCMAKE_BUILD_T
 include_directories(raylib-4.5.0/src/)
 link_directories(raylib-4.5.0/src/)
 
-add_executable(main main.c utils.c particules.c graphics.c automata.c)
+add_executable(main main.c utils.c particules.c graphics.c automata.c input_handler.c temperature.c)
 target_link_libraries(main raylib m pthread dl rt X11 GL  )
 

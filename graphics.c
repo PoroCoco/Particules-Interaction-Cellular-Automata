@@ -1,4 +1,5 @@
 #include "automata.h"
+#include "particules.h"
 #include "graphics.h"
 #include "raylib.h"
 
@@ -39,6 +40,20 @@ graphics_context* graphics_init(uint32_t screen_width, uint32_t screen_height, u
     return context;
 }
 
+uint8_t temperature_to_red(float temperature){
+    if (temperature < 0.0f) {
+        temperature = 0.0f;
+    } else if (temperature > 500.0f) {
+        temperature = 500.0f;
+    }
+
+    float normalizedValue = temperature / 500.0f;
+
+    uint8_t result = (uint8_t)(normalizedValue * 255.0f);
+
+    return result;
+}
+
 void graphics_render(graphics_context* context, const automata* autom){
     BeginDrawing();
 
@@ -49,21 +64,33 @@ void graphics_render(graphics_context* context, const automata* autom){
     uint64_t world_size = automata_get_size(autom);
     for (uint64_t i = 0; i < world_size; i++)
     {
-        if (!automata_index_updated(autom, i)) continue;
+        // if (!automata_index_updated(autom, i)) continue;
         uint32_t index = i * 4;
 
         enum particule_type t = automata_get_particule_type(autom, i);
         switch (t)
         {
             case TYPE_AIR:
-                context->texture_bytes[index] = 200;
-                context->texture_bytes[index+1] = 200;
-                context->texture_bytes[index+2] = 200;
+                context->texture_bytes[index] = temperature_to_red(automata_get_particule(autom, i).temperature);
+                context->texture_bytes[index+1] = 0;
+                context->texture_bytes[index+2] = 0;
                 context->texture_bytes[index+3] = 255;
                 break;
             case TYPE_SAND:
                 context->texture_bytes[index] = 253;
                 context->texture_bytes[index+1] = 249;
+                context->texture_bytes[index+2] = 0;
+                context->texture_bytes[index+3] = 255;
+                break;
+            case TYPE_HEATER:
+                context->texture_bytes[index] = temperature_to_red(automata_get_particule(autom, i).temperature);
+                context->texture_bytes[index+1] = 64;
+                context->texture_bytes[index+2] = 125;
+                context->texture_bytes[index+3] = 255;
+                break;
+            case TYPE_COOLER:
+                context->texture_bytes[index] = temperature_to_red(automata_get_particule(autom, i).temperature);
+                context->texture_bytes[index+1] = 0;
                 context->texture_bytes[index+2] = 0;
                 context->texture_bytes[index+3] = 255;
                 break;

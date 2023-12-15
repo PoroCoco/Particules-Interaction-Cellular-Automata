@@ -1,9 +1,9 @@
-#ifndef _AUTOMATA_INTERNAL_H__
-#define _AUTOMATA_INTERNAL_H__
+#ifndef _AUTOMATA_IMPL_H__
+#define _AUTOMATA_IMPL_H__
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "particules_internal.h"
+#include "automata.h"
+
+#define aut_idx(autom, row, col) ((((autom)->width)*(row)) + (col))
 
 typedef struct automata{
     uint32_t width;
@@ -15,4 +15,4 @@ typedef struct automata{
 
 } automata;
 
-#endif // _AUTOMATA_INTERNAL_H__
+#endif // _AUTOMATA_IMPL_H__
