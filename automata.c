@@ -2,19 +2,11 @@
 #include <string.h>
 
 #include "automata.h"
+#include "automata_internal.h"
 
 #define aut_idx(autom, row, col) ((((autom)->width)*(row)) + (col))
 
 
-typedef struct automata{
-    uint32_t width;
-    uint32_t height;
-    uint32_t current_frame;
-    particule *world;
-    uint32_t world_size;
-    bool *updated;
-
-} automata;
 
 automata* automata_init(uint32_t width, uint32_t height){
     automata *autom = malloc(sizeof(*autom));
@@ -47,32 +39,8 @@ void automata_update(automata* autom){
     memset(autom->updated, false, autom->world_size);
 
     for (uint32_t i = autom->world_size -1 ; i != 0; i--)
-    {
-        if(autom->world[i].type == TYPE_SAND){
-            if (i + autom->width < autom->world_size && autom->world[i + autom->width].type == TYPE_AIR){
-                particule tmp = autom->world[i + autom->width];
-                autom->world[i + autom->width] = autom->world[i];
-                autom->world[i] = tmp;
-                autom->updated[i] = true;
-                autom->updated[i + autom->width] = true;
+        autom->world[i].update(autom, i);
 
-            }else if(i + autom->width + 1 < autom->world_size && autom->world[i + autom->width + 1].type == TYPE_AIR){
-                particule tmp = autom->world[i + autom->width + 1];
-                autom->world[i + autom->width + 1] = autom->world[i];
-                autom->world[i] = tmp;
-                autom->updated[i] = true;
-                autom->updated[i + autom->width + 1] = true;
-
-            }else if(i + autom->width - 1 < autom->world_size && autom->world[i + autom->width - 1].type == TYPE_AIR){
-                particule tmp = autom->world[i + autom->width - 1];
-                autom->world[i + autom->width - 1] = autom->world[i];
-                autom->world[i] = tmp;
-                autom->updated[i] = true;
-                autom->updated[i + autom->width - 1] = true;
-
-            }
-        }
-    }
     return;
 }
 
