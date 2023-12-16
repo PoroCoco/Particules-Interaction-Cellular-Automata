@@ -94,6 +94,20 @@ void graphics_render(graphics_context* context, const automata* autom){
                 context->texture_bytes[index+2] = 0;
                 context->texture_bytes[index+3] = 255;
                 break;
+            case TYPE_GLASS:
+                context->texture_bytes[index] = temperature_to_red(automata_get_particule(autom, i).temperature);
+                context->texture_bytes[index+1] = 200;
+                context->texture_bytes[index+2] = 200;
+                context->texture_bytes[index+3] = 125;
+                break;
+            case TYPE_WATER:
+                context->texture_bytes[index] = 0;
+                context->texture_bytes[index+1] = 0;
+                context->texture_bytes[index+2] = 200;
+                context->texture_bytes[index+3] = 255;
+                break;
+            case TYPE_COUNT:
+                break;
         }
     }
 
